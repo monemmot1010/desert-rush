@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  syntax:
+    name: JS syntax check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Check game modules syntax
+        run: |
+          fail=0
+          for f in 2024/Assets/RacingGame/src/*.js; do
+            echo "checking $f"
+            node --check "$f" || fail=1
+          done
+          exit $fail
+      - name: Check critical assets exist
+        run: |
+          set -e
+          test -f 2024/Assets/RacingGame/index.html
+          test -f 2024/Assets/RacingGame/assets/sky/desert_4k.hdr
+          test -f 2024/Assets/RacingGame/assets/cars/ferrari.glb
+          test -f 2024/Assets/RacingGame/lib/three/addons/libs/draco/gltf/draco_decoder.wasm
+          test -f 2024/Assets/RacingGame/lib/three/addons/loaders/DRACOLoader.js
+          echo "critical assets OK"
+      - name: Check importmap local integrity
+        run: |
+          set -e
+          cd 2024/Assets/RacingGame
+          # كل مسار في importmap يجب أن يكون موجوداً على القرص
+          node -e "
+          const fs = require('fs');
+          const html = fs.readFileSync('index.html', 'utf8');
+          const m = html.match(/\"imports\"\s*:\s*\{([\s\S]*?)\}/);
+          if (!m) { console.error('no importmap found'); process.exit(1); }
+          const entries = [...m[1].matchAll(/\"([^\"]+)\"\s*:\s*\"([^\"]+)\"/g)];
+          let fail = 0;
+          for (const [, key, val] of entries) {
+            if (!val.startsWith('./')) continue;
+            const p = val.slice(2);
+            if (!fs.existsSync(p)) { console.error('MISSING local import target:', key, '->', val); fail = 1; }
+          }
+          process.exit(fail);
+          "

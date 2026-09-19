@@ -44,26 +44,40 @@ python serve.py          # يفتح http://127.0.0.1:8123 (مع Cache-Control: n
 ├── index.html          الواجهة + importmap محلي
 ├── serve.py            خادم تطوير (no-store)
 ├── DESIGN.md           وثيقة التصميم الكاملة (اقرأها أولاً!)
+├── QUALITY_PLAN.md     مخطط ترقية الجودة المرئية بمعايير القبول
 ├── src/
 │   ├── main.js         التجميع: مشهد، إضاءة، حلقة 120Hz، إدخال، شاشات
-│   ├── track.js        الحلبة: spline، طريق، خط سباق، ملف سرعات، ديكور
+│   ├── track.js        الحلبة: spline، طريق، خط سباق، ملف سرعات، تضاريس، ديكور
 │   ├── carPhysics.js   نموذج الإطارات والقبضة والدرفت
-│   ├── car.js          تحميل GLB، عجلات، ميلان، دخان، علامات انزلاق
+│   ├── car.js          تحميل GLB (فيراري/DRACO)، عجلات، ميلان، دخان
 │   ├── ai.js           خصوم خط السباق
 │   ├── camera.js       كاميرا المطاردة السينمائية
 │   ├── audio.js        محرك WebAudio
 │   ├── hud.js          واجهة عربية حية
 │   └── race.js         حالات السباق، اللفات، الترتيب
-├── lib/three/          Three.js r171 محلياً بالكامل (بلا CDN)
-└── assets/             نماذج GLB، أصوات، سماء HDR، خط Cairo
+├── lib/three/          Three.js r171 محلياً بالكامل (بلا CDN) + مفكك DRACO
+└── assets/             نماذج GLB، أصوات، سماء HDR 4K، خرائط PBR، خط Cairo
 ```
+
+## ترقية الجودة المرئية (v2)
+
+بعد المراجعة أُعيد بناء الطبقة البصرية بالكامل وفق `QUALITY_PLAN.md`:
+
+- **سيارة رياضية حقيقية**: فيراري 458 بضغط DRACO بعجلات مسماة `wheel_fl..rr` ومواد PBR (زجاج، كروم، كربون) — مفكك Draco محلي.
+- **إضاءة صورية IBL**: سماء صحراوية 4K HDR من Poly Haven تضيء المشهد وتعكس على السيارات (PMREM) + ACES Filmic.
+- **خرائط PBR حقيقية**: أسفلت ورمل من ambientCG (CC0) بلون + Normal + Roughness — تفاصيل سطح حقيقية بدل الألوان المسطحة.
+- **تضاريس بإزاحة رأسية**: كثبان FBM حقيقية تُسطَّح حول المضمار، وتلوين بالانحدار (صخور على السفوح).
+- **سلسلة بوست-بروسيس سينمائية**: MSAA 4x + Bloom مضبوط + تدرج ألوان (Contrast/Saturation/Vignette/Grain/Chromatic Aberration).
+- **ظلال مُتبعة**: خريطة 2048 تتبع السيارة كل إطار بدل تغطية 280م ثابتة.
 
 ## الأصول والتراخيص
 
 | المصدر | الاستخدام | الترخيص |
 |---|---|---|
-| [Kenney Starter Kit Racing](https://github.com/KenneyNL/Starter-Kit-Racing) | نماذج السيارات GLB + الأصوات | MIT / CC0 |
-| [Poly Haven](https://polyhaven.com) | سماء HDR (sky_4) | CC0 |
+| [Kenney Starter Kit Racing](https://github.com/KenneyNL/Starter-Kit-Racing) | أصوات السباق | MIT / CC0 |
+| [Ferrari 458 GLB](https://github.com/mrdoob/three.js/tree/dev/examples/models/gltf/ferrari) | سيارة اللاعب (DRACO) | من أمثلة three.js (أصول عرض) |
+| [ambientCG](https://ambientcg.com) | أسفلت + رمل PBR (Asphalt007, Ground033) | CC0 |
+| [Poly Haven](https://polyhaven.com) | سماء HDR صحراوية 4K (desert_sands_01) | CC0 |
 | [three.js r171](https://threejs.org) | محرك الرسم | MIT |
 | [خط Cairo](https://github.com/Gue3bara/Cairo) | الواجهة العربية | SIL OFL 1.1 |
 

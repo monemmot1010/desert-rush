@@ -8,7 +8,7 @@ import { CarPhysics } from './carPhysics.js?cb=12';
 ===================================================================== */
 
 const draco = new DRACOLoader();
-draco.setDecoderPath('lib/three/libs/');
+draco.setDecoderPath('lib/three/addons/libs/draco/gltf/');
 const loader = new GLTFLoader();
 loader.setDRACOLoader(draco);
 
