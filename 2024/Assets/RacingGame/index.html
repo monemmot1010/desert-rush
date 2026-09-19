@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>سرعة الصحراء — Desert Rush</title>
+<style>
+  @font-face {
+    font-family: 'Cairo';
+    src: url('assets/fonts/Cairo-Variable.ttf') format('truetype');
+    font-weight: 200 1000;
+    font-display: block;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #1a0e08; }
+  body {
+    font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+    color: #fff;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  #app { position: fixed; inset: 0; }
+  canvas { display: block; }
+
+  /* ====== طبقات الواجهة ====== */
+  .screen {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 20;
+    transition: opacity .45s ease;
+  }
+  .screen.hidden { opacity: 0; pointer-events: none; }
+
+  /* شاشة العنوان */
+  #screen-title {
+    background:
+      radial-gradient(ellipse at 50% 110%, rgba(255,140,40,.28), transparent 60%),
+      radial-gradient(ellipse at 50% -10%, rgba(60,140,220,.18), transparent 55%),
+      linear-gradient(rgba(12,7,4,.55), rgba(12,7,4,.82));
+  }
+  .game-logo {
+    font-size: clamp(52px, 9vw, 110px);
+    font-weight: 900;
+    line-height: 1.05;
+    letter-spacing: .01em;
+    background: linear-gradient(180deg, #ffe9b0 0%, #ffb347 45%, #ff7a1a 80%, #e8540a 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 6px 22px rgba(255,120,20,.35));
+    text-align: center;
+  }
+  .game-sub {
+    margin-top: 6px;
+    font-size: clamp(15px, 2.2vw, 22px);
+    font-weight: 600;
+    color: #ffd9a0;
+    letter-spacing: .35em;
+    text-indent: .35em;
+    opacity: .9;
+  }
+  .press-start {
+    margin-top: 56px;
+    font-size: clamp(18px, 2.6vw, 26px);
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(135deg, #ff8c1a, #ff5400);
+    border: none; border-radius: 14px;
+    padding: 16px 58px;
+    cursor: pointer;
+    box-shadow: 0 8px 30px rgba(255,100,10,.45), inset 0 1px 0 rgba(255,255,255,.35);
+    transition: transform .15s ease, box-shadow .15s ease;
+    font-family: inherit;
+  }
+  .press-start:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 12px 40px rgba(255,100,10,.6); }
+  .press-start:active { transform: translateY(1px) scale(.99); }
+  .credit-line {
+    position: absolute; bottom: 18px;
+    font-size: 12px; color: rgba(255,255,255,.55);
+    text-align: center; line-height: 1.7;
+  }
+
+  /* شاشة اختيار السيارة */
+  #screen-garage {
+    background:
+      radial-gradient(ellipse at 50% 120%, rgba(255,120,30,.22), transparent 60%),
+      linear-gradient(rgba(10,6,3,.78), rgba(10,6,3,.92));
+  }
+  .garage-title { font-size: clamp(30px, 4.5vw, 46px); font-weight: 900; color: #ffd9a0; }
+  .garage-hint { margin-top: 4px; font-size: 15px; color: rgba(255,255,255,.65); font-weight: 600; }
+  .car-row { display: flex; gap: 22px; margin-top: 34px; flex-wrap: wrap; justify-content: center; }
+  .car-card {
+    width: 178px; padding: 18px 14px 14px;
+    background: linear-gradient(160deg, rgba(255,255,255,.09), rgba(255,255,255,.03));
+    border: 2px solid rgba(255,255,255,.14);
+    border-radius: 18px;
+    cursor: pointer;
+    text-align: center;
+    transition: transform .16s ease, border-color .16s ease, background .16s ease;
+  }
+  .car-card:hover { transform: translateY(-4px); border-color: rgba(255,180,80,.55); }
+  .car-card.selected {
+    border-color: #ffb347;
+    background: linear-gradient(160deg, rgba(255,160,60,.22), rgba(255,110,20,.08));
+    box-shadow: 0 10px 34px rgba(255,140,30,.35);
+  }
+  .car-swatch {
+    width: 74px; height: 74px; margin: 0 auto 12px;
+    border-radius: 50%;
+    border: 3px solid rgba(255,255,255,.35);
+    box-shadow: inset 0 -14px 22px rgba(0,0,0,.35), 0 6px 16px rgba(0,0,0,.4);
+  }
+  .car-name { font-size: 19px; font-weight: 800; }
+  .car-stats { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .stat-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: rgba(255,255,255,.75); }
+  .stat-row .stat-label { width: 44px; text-align: left; font-weight: 700; }
+  .stat-bar { flex: 1; height: 7px; border-radius: 4px; background: rgba(255,255,255,.12); overflow: hidden; }
+  .stat-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #ffcf6e, #ff7a1a); }
+  .garage-start {
+    margin-top: 36px; font-size: 21px; font-weight: 800;
+    font-family: inherit; color: #fff;
+    background: linear-gradient(135deg, #ff8c1a, #ff5400);
+    border: none; border-radius: 12px; padding: 13px 52px; cursor: pointer;
+    box-shadow: 0 8px 26px rgba(255,100,10,.45);
+    transition: transform .15s ease;
+  }
+  .garage-start:hover { transform: translateY(-2px); }
+  .controls-help {
+    margin-top: 26px; display: flex; gap: 26px; flex-wrap: wrap; justify-content: center;
+    font-size: 13px; color: rgba(255,255,255,.7); font-weight: 600;
+  }
+  .key-cap {
+    display: inline-block; min-width: 26px; text-align: center;
+    background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.3);
+    border-bottom-width: 3px; border-radius: 6px;
+    padding: 2px 7px; margin-left: 5px; font-weight: 800; font-size: 12px;
+    direction: ltr;
+  }
+
+  /* ====== HUD ====== */
+  #hud { position: fixed; inset: 0; z-index: 10; pointer-events: none; opacity: 0; transition: opacity .4s ease; }
+  #hud.on { opacity: 1; }
+
+  .speed-cluster {
+    position: absolute; bottom: 26px; left: 34px;
+    width: 168px; height: 168px;
+  }
+  .speed-cluster svg { width: 100%; height: 100%; transform: rotate(108deg); overflow: visible; }
+  .speed-center {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .speed-value { font-size: 42px; font-weight: 900; line-height: 1; text-shadow: 0 2px 12px rgba(0,0,0,.65); direction: ltr; }
+  .speed-unit { font-size: 13px; font-weight: 700; color: #ffd9a0; margin-top: 2px; }
+  .gear-badge {
+    margin-top: 5px;
+    font-size: 13px; font-weight: 800;
+    background: rgba(0,0,0,.5); border: 1px solid rgba(255,200,120,.4);
+    border-radius: 8px; padding: 1px 10px;
+  }
+
+  .race-panel {
+    position: absolute; top: 22px; right: 30px;
+    display: flex; flex-direction: column; gap: 8px; align-items: flex-start;
+  }
+  .lap-badge, .pos-badge, .time-badge {
+    background: rgba(8,5,3,.55);
+    border: 1px solid rgba(255,255,255,.16);
+    border-radius: 12px;
+    padding: 6px 16px;
+    backdrop-filter: blur(6px);
+    display: flex; align-items: baseline; gap: 8px;
+  }
+  .pos-badge .big { font-size: 34px; font-weight: 900; color: #ffc45c; line-height: 1; }
+  .lap-badge .big, .time-badge .big { font-size: 20px; font-weight: 800; }
+  .badge-label { font-size: 12px; font-weight: 700; color: rgba(255,255,255,.65); }
+  .time-badge .big { direction: ltr; font-variant-numeric: tabular-nums; }
+  .best-time { font-size: 12px; color: #9fe8ff; font-weight: 700; direction: ltr; font-variant-numeric: tabular-nums; }
+
+  #minimap {
+    position: absolute; bottom: 30px; right: 30px;
+    width: 172px; height: 172px;
+    background: rgba(8,5,3,.5);
+    border: 1px solid rgba(255,255,255,.16);
+    border-radius: 16px;
+    backdrop-filter: blur(6px);
+  }
+
+  .standings {
+    position: absolute; top: 22px; left: 30px;
+    display: flex; flex-direction: column; gap: 4px;
+    min-width: 168px;
+  }
+  .standing-row {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(8,5,3,.42);
+    border-radius: 9px; padding: 3px 12px;
+    font-size: 14px; font-weight: 700;
+    border-inline-start: 3px solid transparent;
+  }
+  .standing-row.me { background: rgba(255,140,30,.25); border-inline-start-color: #ffb347; }
+  .standing-row .rank { width: 20px; color: #ffc45c; font-weight: 900; }
+  .standing-row .nm { flex: 1; }
+
+  #next-corner {
+    position: absolute; top: 50%; right: 34px; transform: translateY(-50%);
+    width: 84px; height: 84px; opacity: 0; transition: opacity .25s ease;
+  }
+  #next-corner.on { opacity: .95; }
+
+  #countdown {
+    position: fixed; inset: 0; z-index: 15;
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: none;
+  }
+  #countdown .num {
+    font-size: clamp(120px, 22vw, 260px); font-weight: 900;
+    color: #fff; text-shadow: 0 0 60px rgba(255,150,40,.8), 0 8px 30px rgba(0,0,0,.6);
+    opacity: 0; transform: scale(2.2);
+  }
+  #countdown .num.show { animation: cdPop .9s ease forwards; }
+  @keyframes cdPop {
+    0% { opacity: 0; transform: scale(2.4); }
+    18% { opacity: 1; transform: scale(1); }
+    80% { opacity: 1; transform: scale(.96); }
+    100% { opacity: 0; transform: scale(1.5); }
+  }
+
+  #toast {
+    position: fixed; top: 18%; left: 50%; transform: translateX(-50%) scale(.8);
+    z-index: 16; font-size: clamp(26px, 4.5vw, 44px); font-weight: 900;
+    color: #ffd9a0; text-shadow: 0 4px 26px rgba(0,0,0,.7);
+    opacity: 0; transition: opacity .3s ease, transform .3s ease;
+    pointer-events: none; text-align: center;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) scale(1); }
+
+  /* شاشة النتائج */
+  #screen-results {
+    background: linear-gradient(rgba(8,5,3,.72), rgba(8,5,3,.9));
+  }
+  .results-title { font-size: clamp(38px, 6vw, 64px); font-weight: 900; color: #ffc45c; }
+  .results-sub { font-size: 18px; color: rgba(255,255,255,.75); font-weight: 600; margin-top: 4px; }
+  .results-list { margin-top: 30px; display: flex; flex-direction: column; gap: 8px; min-width: min(520px, 86vw); }
+  .result-row {
+    display: flex; align-items: center; gap: 14px;
+    background: rgba(255,255,255,.07);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 14px; padding: 12px 20px;
+    font-size: 17px; font-weight: 700;
+  }
+  .result-row.me { background: rgba(255,150,40,.2); border-color: rgba(255,180,80,.5); }
+  .result-row .r-rank { width: 44px; font-size: 24px; font-weight: 900; color: #ffc45c; }
+  .result-row .r-time { margin-right: auto; margin-left: 0; direction: ltr; font-variant-numeric: tabular-nums; color: #bfe8ff; font-size: 15px; }
+  .results-buttons { margin-top: 34px; display: flex; gap: 16px; }
+  .btn-secondary {
+    font-family: inherit; font-size: 17px; font-weight: 700; color: #fff;
+    background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.3);
+    border-radius: 12px; padding: 12px 34px; cursor: pointer; transition: background .15s;
+  }
+  .btn-secondary:hover { background: rgba(255,255,255,.22); }
+
+  /* شاشة التحميل */
+  #screen-loading {
+    background: radial-gradient(ellipse at 50% 60%, rgba(255,120,30,.14), transparent 65%), #140b06;
+    z-index: 40;
+  }
+  .load-title { font-size: 30px; font-weight: 900; color: #ffd9a0; }
+  .load-bar { width: min(380px, 70vw); height: 10px; border-radius: 6px; background: rgba(255,255,255,.12); margin-top: 22px; overflow: hidden; }
+  .load-fill { height: 100%; width: 0%; border-radius: 6px; background: linear-gradient(90deg, #ffcf6e, #ff6a00); transition: width .3s ease; }
+  .load-tip { margin-top: 16px; font-size: 14px; color: rgba(255,255,255,.6); font-weight: 600; }
+
+  #vignette {
+    position: fixed; inset: 0; z-index: 5; pointer-events: none; opacity: 0;
+    background: radial-gradient(ellipse at center, transparent 46%, rgba(10,4,0,.55) 100%);
+    transition: opacity .2s linear;
+  }
+  #flash { position: fixed; inset: 0; z-index: 6; pointer-events: none; background: #fff; opacity: 0; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="vignette"></div>
+<div id="flash"></div>
+
+<!-- شاشة التحميل -->
+<div class="screen" id="screen-loading">
+  <div class="load-title">🏁 سرعة الصحراء</div>
+  <div class="load-bar"><div class="load-fill" id="load-fill"></div></div>
+  <div class="load-tip" id="load-tip">جارٍ تحميل الأصول…</div>
+</div>
+
+<!-- شاشة العنوان -->
+<div class="screen hidden" id="screen-title">
+  <div class="game-logo">سرعة الصحراء</div>
+  <div class="game-sub">DESERT&nbsp;RUSH</div>
+  <button class="press-start" id="btn-start">ابدأ السباق</button>
+  <div class="credit-line">
+    النماذج والأصوات: Kenney (CC0) • سماء: Poly Haven (CC0) • محرك: three.js (MIT)<br>
+    جميع النصوص والأكواد الأصلية لألعاب السباق — استخدم الأسهم للقيادة
+  </div>
+</div>
+
+<!-- شاشة اختيار السيارة -->
+<div class="screen hidden" id="screen-garage">
+  <div class="garage-title">اختر سيارتك</div>
+  <div class="garage-hint">لكل سيارة شخصية قيادة مختلفة قليلاً</div>
+  <div class="car-row" id="car-row"></div>
+  <button class="garage-start" id="btn-race">إلى خط الانطلاق →</button>
+  <div class="controls-help">
+    <span>التسارع<span class="key-cap">↑</span></span>
+    <span>الفرملة / الرجوع<span class="key-cap">↓</span></span>
+    <span>التوجيه<span class="key-cap">→</span><span class="key-cap">←</span></span>
+    <span>درافت (فرملة يد)<span class="key-cap">Space</span></span>
+    <span>تغيير الكاميرا<span class="key-cap">V</span></span>
+    <span>إعادة السباق<span class="key-cap">R</span></span>
+  </div>
+</div>
+
+<!-- شاشة النتائج -->
+<div class="screen hidden" id="screen-results">
+  <div class="results-title" id="results-title">النتائج</div>
+  <div class="results-sub" id="results-sub"></div>
+  <div class="results-list" id="results-list"></div>
+  <div class="results-buttons">
+    <button class="press-start" id="btn-again" style="margin-top:0">سباق جديد</button>
+    <button class="btn-secondary" id="btn-garage">تغيير السيارة</button>
+  </div>
+</div>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="race-panel">
+    <div class="pos-badge"><span class="big" id="hud-pos">4</span><span class="badge-label">المركز</span></div>
+    <div class="lap-badge"><span class="big" id="hud-lap">1/3</span><span class="badge-label">اللفة</span></div>
+    <div class="time-badge"><span class="badge-label">زمن اللفة</span><span class="big" id="hud-laptime">0:00.000</span></div>
+    <div class="time-badge"><span class="badge-label">أفضل لفة</span><span class="big best-time" id="hud-best">—</span></div>
+  </div>
+
+  <div class="standings" id="standings"></div>
+
+  <div class="speed-cluster">
+    <svg viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="44" fill="rgba(8,5,3,.55)" stroke="rgba(255,255,255,.15)" stroke-width="1.5"/>
+      <path id="rpm-arc-bg" d="" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="6" stroke-linecap="round"/>
+      <path id="rpm-arc" d="" fill="none" stroke="#ff7a1a" stroke-width="6" stroke-linecap="round"/>
+    </svg>
+    <div class="speed-center">
+      <div class="speed-value" id="hud-speed">0</div>
+      <div class="speed-unit">كم/س</div>
+      <div class="gear-badge" id="hud-gear">N</div>
+    </div>
+  </div>
+
+  <canvas id="minimap" width="344" height="344"></canvas>
+
+  <svg id="next-corner" viewBox="0 0 100 100">
+    <path id="corner-arrow" d="M50 12 L82 66 L62 66 L62 90 L38 90 L38 66 L18 66 Z"
+          fill="rgba(255,180,60,.92)" stroke="rgba(0,0,0,.35)" stroke-width="3" stroke-linejoin="round"/>
+  </svg>
+</div>
+
+<div id="countdown"><div class="num" id="cd-num"></div></div>
+<div id="toast"></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "./lib/three/three.module.js",
+    "three/addons/": "./lib/three/addons/"
+  }
+}
+</script>
+<script type="module" src="src/main.js?cb=12"></script>
+</body>
+</html>

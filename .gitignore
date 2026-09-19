@@ -1,0 +1,14 @@
+# جلسة Codebuff (محلية فقط)
+.freebuff/
+
+# كاش أصول Adobe Animate المحلي (ليس من عمل هذه الجلسة)
+2024/Assets/Default/
+2024/Assets/Custom/
+2024/Assets/.AssetUpdate/
+2024/Assets/.TempDownloadAssets/
+
+# ملفات التنزيل المؤقتة وسجلات الخادم
+_dl/
+server.log
+*.log
+ph_sky.json
